@@ -41,4 +41,12 @@ class Article extends Model
     {
         return $this->belongsToMany(Tag::class);
     }
+
+    /**
+     * @param $value
+     */
+    public function setUserIdAttribute($value)
+    {
+        $this->attributes['user_id'] = $value;
+    }
 }

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Article;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\ArticleRequest;
+use App\Services\ArticleService;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Class ArticleController
@@ -14,13 +16,19 @@ use Illuminate\Http\Request;
 class ArticleController extends Controller
 {
     /**
+     * @var ArticleService
+     */
+    private $articleService;
+
+    /**
      * Create a new controller instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(ArticleService $articleService)
     {
         $this->middleware('auth');
+        $this->articleService = $articleService;
     }
 
     /**
@@ -30,7 +38,10 @@ class ArticleController extends Controller
      */
     public function index()
     {
-        return view('article.index',  ['articles' => Article::all()]);
+        return view(
+            'article.index',
+            ['articles' => Article::all()]
+        );
     }
 
     /**
@@ -46,12 +57,19 @@ class ArticleController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param ArticleRequest $articleRequest
+     *
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
+    public function store(ArticleRequest $articleRequest)
     {
-        $article = Article::create($this->validateArticle($request));
+//        $article = Article::create($articleRequest->validated());
+
+        $article = $this
+            ->articleService
+            ->create(
+                $articleRequest->validated()
+            );
 
         return redirect()->route('article.show', $article)->with('status', 'Successfully Inserted!');
     }
@@ -64,8 +82,9 @@ class ArticleController extends Controller
      */
     public function show(Article $article)
     {
-        return view('article.show', [
-            'article' => $article
+        return view(
+            'article.show', [
+            'article' => $this->articleService->find($article->id)
         ]);
     }
 
@@ -78,20 +97,22 @@ class ArticleController extends Controller
     public function edit(Article $article)
     {
         return view('article.edit', [
-            'article' => $article
+            'article' => $this->articleService->find($article->id)
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  Article $article
-     * @return \Illuminate\Http\Response
+     * @param ArticleRequest $articleRequest
+     * @param Article $article
+     *
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
      */
-    public function update(Request $request, Article $article)
+    public function update(ArticleRequest $articleRequest, Article $article)
     {
-        $article->update($this->validateArticle($request));
+//        $article->update($articleRequest->validated());
+        $this->articleService->update($article->id, $articleRequest->validated());
 
         return redirect($article->path())->with('status', 'Successfully Updated!');
     }
@@ -106,23 +127,9 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article)
     {
-        $article->delete();
+//        $article->delete();
+        $this->articleService->delete($article->id);
 
         return redirect()->back()->with('status', 'Successfully Deleted!');
-    }
-
-    /**
-     * Validate article attributes.
-     *
-     * @param Request $request
-     *
-     * @return array
-     */
-    public function validateArticle(Request $request): array
-    {
-        return $request->validate([
-            'title' => 'required|max:255',
-            'content' => 'required'
-        ]);
     }
 }
